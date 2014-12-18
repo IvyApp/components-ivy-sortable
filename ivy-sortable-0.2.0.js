@@ -1,8 +1,120 @@
-define("ivy-sortable/helpers/ivy-sortable",
+(function() {;
+var define, requireModule, require, requirejs;
+
+(function() {
+
+  var _isArray;
+  if (!Array.isArray) {
+    _isArray = function (x) {
+      return Object.prototype.toString.call(x) === "[object Array]";
+    };
+  } else {
+    _isArray = Array.isArray;
+  }
+  
+  var registry = {}, seen = {}, state = {};
+  var FAILED = false;
+
+  define = function(name, deps, callback) {
+  
+    if (!_isArray(deps)) {
+      callback = deps;
+      deps     =  [];
+    }
+  
+    registry[name] = {
+      deps: deps,
+      callback: callback
+    };
+  };
+
+  function reify(deps, name, seen) {
+    var length = deps.length;
+    var reified = new Array(length);
+    var dep;
+    var exports;
+
+    for (var i = 0, l = length; i < l; i++) {
+      dep = deps[i];
+      if (dep === 'exports') {
+        exports = reified[i] = seen;
+      } else {
+        reified[i] = require(resolve(dep, name));
+      }
+    }
+
+    return {
+      deps: reified,
+      exports: exports
+    };
+  }
+
+  requirejs = require = requireModule = function(name) {
+    if (state[name] !== FAILED &&
+        seen.hasOwnProperty(name)) {
+      return seen[name];
+    }
+
+    if (!registry[name]) {
+      throw new Error('Could not find module ' + name);
+    }
+
+    var mod = registry[name];
+    var reified;
+    var module;
+    var loaded = false;
+
+    seen[name] = { }; // placeholder for run-time cycles
+
+    try {
+      reified = reify(mod.deps, name, seen[name]);
+      module = mod.callback.apply(this, reified.deps);
+      loaded = true;
+    } finally {
+      if (!loaded) {
+        state[name] = FAILED;
+      }
+    }
+
+    return reified.exports ? seen[name] : (seen[name] = module);
+  };
+
+  function resolve(child, name) {
+    if (child.charAt(0) !== '.') { return child; }
+
+    var parts = child.split('/');
+    var nameParts = name.split('/');
+    var parentBase;
+
+    if (nameParts.length === 1) {
+      parentBase = nameParts;
+    } else {
+      parentBase = nameParts.slice(0, -1);
+    }
+
+    for (var i = 0, l = parts.length; i < l; i++) {
+      var part = parts[i];
+
+      if (part === '..') { parentBase.pop(); }
+      else if (part === '.') { continue; }
+      else { parentBase.push(part); }
+    }
+
+    return parentBase.join('/');
+  }
+
+  requirejs.entries = requirejs._eak_seen = registry;
+  requirejs.clear = function(){
+    requirejs.entries = requirejs._eak_seen = registry = {};
+    seen = state = {};
+  };
+})();
+
+;define("ivy-sortable/helpers/ivy-sortable", 
   ["ember","exports"],
   function(__dependency1__, __exports__) {
     "use strict";
-    var Ember = __dependency1__["default"] || __dependency1__;
+    var Ember = __dependency1__["default"];
 
     __exports__["default"] = function(path, options) {
       var ctx, helperName = 'ivy-sortable';
@@ -24,39 +136,21 @@ define("ivy-sortable/helpers/ivy-sortable",
       return Ember.Handlebars.helpers.collection.call(ctx, 'ivy-sortable', options);
     }
   });
-define("ivy-sortable/initializer",
-  ["./views/ivy-sortable","./helpers/ivy-sortable","exports"],
+;define("ivy-sortable/index", 
+  ["ivy-sortable/views/ivy-sortable","ivy-sortable/helpers/ivy-sortable","exports"],
   function(__dependency1__, __dependency2__, __exports__) {
     "use strict";
-    var IvySortableView = __dependency1__["default"] || __dependency1__;
-    var ivySortableHelper = __dependency2__["default"] || __dependency2__;
-
-    __exports__["default"] = {
-      name: 'ivy-sortable',
-
-      initialize: function(container) {
-        container.register('helper:ivy-sortable', ivySortableHelper);
-        container.register('view:ivy-sortable', IvySortableView);
-      }
-    };
-  });
-define("ivy-sortable",
-  ["./views/ivy-sortable","./helpers/ivy-sortable","./initializer","exports"],
-  function(__dependency1__, __dependency2__, __dependency3__, __exports__) {
-    "use strict";
-    var IvySortableView = __dependency1__["default"] || __dependency1__;
-    var ivySortableHelper = __dependency2__["default"] || __dependency2__;
-    var initializer = __dependency3__["default"] || __dependency3__;
+    var IvySortableView = __dependency1__["default"];
+    var ivySortableHelper = __dependency2__["default"];
 
     __exports__.IvySortableView = IvySortableView;
-    __exports__.initializer = initializer;
     __exports__.ivySortableHelper = ivySortableHelper;
   });
-define("ivy-sortable/views/ivy-sortable",
+;define("ivy-sortable/views/ivy-sortable", 
   ["ember","exports"],
   function(__dependency1__, __exports__) {
     "use strict";
-    var Ember = __dependency1__["default"] || __dependency1__;
+    var Ember = __dependency1__["default"];
 
     __exports__["default"] = Ember.CollectionView.extend(Ember.TargetActionSupport, {
       disabled: false,
@@ -159,3 +253,39 @@ define("ivy-sortable/views/ivy-sortable",
       }
     });
   });
+;/* global define, require */
+define('ivy-sortable-shim', ['exports'], function(__exports__) {
+  'use strict';
+  __exports__['default'] = function(container) {
+    container.register('helper:ivy-sortable', require('ivy-sortable/helpers/ivy-sortable')['default']);
+    container.register('view:ivy-sortable', require('ivy-sortable/views/ivy-sortable')['default']);
+  };
+});
+;/* global define, require, window */
+var addonName = 'ivy-sortable';
+
+define('ember', ['exports'], function(__exports__) {
+  __exports__['default'] = window.Ember;
+});
+
+var index = addonName + '/index';
+define(addonName, ['exports'], function(__exports__) {
+  var library = require(index);
+  Object.keys(library).forEach(function(key) {
+    __exports__[key] = library[key];
+  });
+});
+
+// Glue library to a global var
+window.IvySortable = require(index);
+
+// Register library items in the container
+var shim = addonName + '-shim';
+window.Ember.Application.initializer({
+  name: shim,
+
+  initialize: function(container) {
+    require(shim)['default'](container);
+  }
+});
+})();
