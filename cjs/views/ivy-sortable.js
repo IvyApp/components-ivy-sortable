@@ -30,8 +30,11 @@ exports["default"] = Ember.CollectionView.extend(Ember.TargetActionSupport, {
 
     if (content) {
       var item = content.objectAt(oldIndex);
-      content.removeAt(oldIndex);
-      content.insertAt(newIndex, item);
+
+      this._disableArrayObservers(content, function() {
+        content.removeAt(oldIndex);
+        content.insertAt(newIndex, item);
+      });
 
       this.sendAction('moved', item, oldIndex, newIndex);
     }
@@ -83,6 +86,15 @@ exports["default"] = Ember.CollectionView.extend(Ember.TargetActionSupport, {
     var newIndex = ui.item.index();
 
     this.move(oldIndex, newIndex);
+  },
+
+  _disableArrayObservers: function(content, callback) {
+    content.removeArrayObserver(this);
+    try {
+      callback.call(this);
+    } finally {
+      content.addArrayObserver(this);
+    }
   },
 
   _disabledDidChange: function() {
