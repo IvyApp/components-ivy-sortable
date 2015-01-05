@@ -110,7 +110,7 @@ var define, requireModule, require, requirejs;
   };
 })();
 
-;define("ivy-sortable/helpers/ivy-sortable",
+;define("ivy-sortable/helpers/ivy-sortable", 
   ["ember","exports"],
   function(__dependency1__, __exports__) {
     "use strict";
@@ -136,7 +136,7 @@ var define, requireModule, require, requirejs;
       return Ember.Handlebars.helpers.collection.call(ctx, 'ivy-sortable', options);
     }
   });
-;define("ivy-sortable/index",
+;define("ivy-sortable/index", 
   ["ivy-sortable/views/ivy-sortable","ivy-sortable/helpers/ivy-sortable","exports"],
   function(__dependency1__, __dependency2__, __exports__) {
     "use strict";
@@ -146,7 +146,7 @@ var define, requireModule, require, requirejs;
     __exports__.IvySortableView = IvySortableView;
     __exports__.ivySortableHelper = ivySortableHelper;
   });
-;define("ivy-sortable/views/ivy-sortable",
+;define("ivy-sortable/views/ivy-sortable", 
   ["ember","exports"],
   function(__dependency1__, __exports__) {
     "use strict";
@@ -158,8 +158,6 @@ var define, requireModule, require, requirejs;
       tagName: 'ul',
 
       destroySortable: Ember.on('willDestroyElement', function() {
-        this.removeObserver('disabled', this, this._disabledDidChange);
-
         this.$().sortable('destroy');
       }),
 
@@ -172,8 +170,12 @@ var define, requireModule, require, requirejs;
 
         this.$().sortable(opts);
 
-        this.addObserver('disabled', this, this._disabledDidChange);
-        this._disabledDidChange();
+        Ember.EnumerableUtils.forEach([
+          'axis', 'containment', 'cursor', 'cursorAt', 'delay', 'disabled',
+          'distance', 'forceHelperSize', 'forcePlaceholderSize', 'grid', 'helper',
+          'opacity', 'placeholder', 'revert', 'scroll', 'scrollSensitivity',
+          'scrollSpeed', 'tolerance', 'zIndex'
+        ], this._bindSortableOption, this);
       }),
 
       move: function(oldIndex, newIndex) {
@@ -239,6 +241,18 @@ var define, requireModule, require, requirejs;
         this.move(oldIndex, newIndex);
       },
 
+      _bindSortableOption: function(key) {
+        this.addObserver(key, this, this._optionDidChange);
+
+        if (key in this) {
+          this._optionDidChange(this, key);
+        }
+
+        this.on('willDestroyElement', this, function() {
+          this.removeObserver(key, this, this._optionDidChange);
+        });
+      },
+
       _disableArrayObservers: function(content, callback) {
         content.removeArrayObserver(this);
         try {
@@ -248,8 +262,8 @@ var define, requireModule, require, requirejs;
         }
       },
 
-      _disabledDidChange: function() {
-        this.$().sortable(this.get('disabled') ? 'disable' : 'enable');
+      _optionDidChange: function(sender, key) {
+        this.$().sortable('option', key, this.get(key));
       }
     });
   });
