@@ -1,11 +1,11 @@
 {
   "name": "ivy-sortable",
-  "version": "0.2.1",
+  "version": "0.3.0+canary",
   "authors": [
     "Dray Lacy"
   ],
   "description": "An Ember component for jQuery UI's Sortable Widget.",
-  "main": "./ivy-sortable-0.2.1.js",
+  "main": "./ivy-sortable.js",
   "keywords": [
     "ember"
   ],
