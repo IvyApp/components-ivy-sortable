@@ -157,7 +157,19 @@ var define, requireModule, require, requirejs;
 
       tagName: 'ul',
 
+      arrayDidChangeAfterElementInserted: function() {
+        Ember.run.scheduleOnce('afterRender', this, this._refreshSortable);
+      },
+
+      arrayWillChangeAfterElementInserted: function() {
+      },
+
       destroySortable: Ember.on('willDestroyElement', function() {
+        this._contentWillChangeAfterElementInserted();
+
+        Ember.removeBeforeObserver(this, 'content', this, this._contentWillChangeAfterElementInserted);
+        this.removeObserver('content', this, this._contentDidChangeAfterElementInserted);
+
         this.$().sortable('destroy');
       }),
 
@@ -176,6 +188,11 @@ var define, requireModule, require, requirejs;
           'opacity', 'placeholder', 'revert', 'scroll', 'scrollSensitivity',
           'scrollSpeed', 'tolerance', 'zIndex'
         ], this._bindSortableOption, this);
+
+        Ember.addBeforeObserver(this, 'content', this, this._contentWillChangeAfterElementInserted);
+        this.addObserver('content', this, this._contentDidChangeAfterElementInserted);
+
+        this._contentDidChangeAfterElementInserted();
       }),
 
       move: function(oldIndex, newIndex) {
@@ -253,6 +270,34 @@ var define, requireModule, require, requirejs;
         });
       },
 
+      _contentDidChangeAfterElementInserted: function() {
+        var content = this.get('content');
+
+        if (content) {
+          content.addArrayObserver(this, {
+            didChange: 'arrayDidChangeAfterElementInserted',
+            willChange: 'arrayWillChangeAfterElementInserted'
+          });
+        }
+
+        var len = content ? Ember.get(content, 'length') : 0;
+        this.arrayDidChangeAfterElementInserted(content, 0, null, len);
+      },
+
+      _contentWillChangeAfterElementInserted: function() {
+        var content = this.get('content');
+
+        if (content) {
+          content.removeArrayObserver(this, {
+            didChange: 'arrayDidChangeAfterElementInserted',
+            willChange: 'arrayWillChangeAfterElementInserted'
+          });
+        }
+
+        var len = content ? Ember.get(content, 'length') : 0;
+        this.arrayWillChangeAfterElementInserted(content, 0, len);
+      },
+
       _disableArrayObservers: function(content, callback) {
         content.removeArrayObserver(this);
         try {
@@ -264,6 +309,10 @@ var define, requireModule, require, requirejs;
 
       _optionDidChange: function(sender, key) {
         this.$().sortable('option', key, this.get(key));
+      },
+
+      _refreshSortable: function() {
+        this.$().sortable('refresh');
       }
     });
   });
