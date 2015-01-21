@@ -1,22 +1,16 @@
 {
   "name": "ivy-sortable",
-  "version": "0.1.0",
+  "version": "1.0.0-beta.1",
   "authors": [
     "Dray Lacy"
   ],
-  "description": "Ember helper for jQuery UI's Sortable module.",
-  "main": "dist/globals/main.js",
-  "moduleType": [
-    "amd",
-    "globals",
-    "node"
-  ],
+  "description": "An Ember component for jQuery UI's Sortable Widget.",
+  "main": "./ivy-sortable.js",
   "keywords": [
-    "ember",
-    "jquery-ui"
+    "ember"
   ],
   "dependencies": {
     "ember": ">= 1.3.0",
-    "jquery-ui": "~> 1.11"
+    "jquery-ui": "~> 1.11.2"
   }
 }
